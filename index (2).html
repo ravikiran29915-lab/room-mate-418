@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room Check</title>
+<meta name="description" content="Real-time presence tracking for Suite 402">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#10131a; --text:#e1e2ec; --muted:#c7c4d7; --dim:#908fa0;
+  --green:#4edea3; --green-d:#00885d; --cyan:#03b5d3; --cyan-l:#4cd7f6;
+  --red:#ffb4ab; --red-d:#93000a; --indigo:#8083ff; --lav:#c0c1ff;
+  --card:rgba(29,31,39,.6); --chip:#272a32; --inset:rgba(11,14,21,.6);
+  --serif:'Liberation Serif','Times New Roman',Times,serif;
+  --sans:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+button{font:inherit;border:0;cursor:pointer;color:inherit;background:none}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cyan-l);outline-offset:2px}
+svg{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{position:relative;overflow:hidden;padding:104px 32px 24px;display:flex;flex-direction:column;gap:24px;max-width:1280px;margin:0 auto}
+.blob{position:absolute;border-radius:50%;pointer-events:none;filter:blur(70px)}
+.b1{width:384px;height:384px;left:-128px;top:-128px;background:rgba(73,75,214,.1)}
+.b2{width:480px;height:420px;right:-128px;top:33%;background:rgba(3,181,211,.1)}
+.b3{width:320px;height:320px;left:33%;bottom:40px;background:rgba(0,136,93,.1);filter:blur(60px)}
+.wrap>*{position:relative}
+.serif{font-family:var(--serif);font-weight:700}
+.glass{background:var(--card);backdrop-filter:blur(12px);border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1)}
+
+/* header */
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.title-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+h1{font:700 30px/38px var(--serif);letter-spacing:-.75px}
+.pill{display:inline-flex;gap:6px;align-items:center;padding:4px 12px;border-radius:99px;font:700 11px/14px var(--serif);letter-spacing:.55px;text-transform:uppercase}
+.pill.live{background:rgba(39,42,50,.8);color:var(--green);backdrop-filter:blur(6px)}
+.ping{position:relative;width:10px;height:10px}
+.ping i,.ping b{position:absolute;inset:0;border-radius:50%;background:var(--green)}
+.ping i{opacity:.75;animation:ping 1.6s cubic-bezier(0,0,.2,1) infinite}
+@keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+.tag{background:var(--inset);color:var(--muted);padding:2px 8px;border-radius:4px;font:500 11px/16px var(--sans);letter-spacing:.33px}
+.sub{color:var(--muted);font-size:14px;line-height:20px;margin-top:4px}
+.clock{display:flex;gap:8px;align-items:center;padding:8px 16px;border-radius:12px;background:rgba(29,31,39,.7);backdrop-filter:blur(12px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.clock .ic{width:32px;height:32px;border-radius:8px;background:var(--chip);display:grid;place-items:center;color:var(--cyan-l);font-size:16px}
+.clock .t{font:700 22px/28px var(--serif);letter-spacing:-.55px}
+.clock .d{font:500 11px/16px var(--sans);letter-spacing:.55px;color:var(--muted);text-transform:uppercase}
+.dot8{width:8px;height:8px;border-radius:50%;background:var(--cyan-l);margin-left:4px}
+
+/* metric cards */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.metric{padding:24px;display:flex;flex-direction:column;gap:8px;overflow:hidden;position:relative}
+.metric::after{content:"";position:absolute;right:-32px;bottom:-32px;width:112px;height:112px;border-radius:50%;filter:blur(20px);background:var(--glow)}
+.row{display:flex;justify-content:space-between;align-items:center}
+.m-title{font:400 16px/24px var(--serif);display:flex;gap:4px;align-items:center}
+.m-title .d{width:8px;height:8px;border-radius:50%}
+.big{display:flex;gap:4px;align-items:baseline;padding-top:8px}
+.big b{font:700 38px/38px var(--serif)}
+.big span,.small{font-size:12px;line-height:18px;letter-spacing:.12px;color:var(--muted)}
+.badge{padding:2px 8px;border-radius:99px;font:700 11px/14px var(--serif);letter-spacing:.66px}
+.bar{height:6px;background:#32353d;border-radius:99px;overflow:hidden;margin-top:2px}
+.bar i{display:block;height:100%;background:var(--green);border-radius:99px;box-shadow:0 0 8px rgba(78,222,163,.6);transition:width .4s}
+.mini{font:500 11px/16px var(--sans);letter-spacing:.33px;color:var(--muted)}
+.icbtn{width:40px;height:40px;border-radius:12px;background:var(--chip);display:grid;place-items:center;color:var(--lav);font-size:20px}
+
+/* toolbar */
+.toolbar{display:flex;gap:16px;align-items:center;padding:16px;border-radius:16px;background:rgba(25,27,35,.8);backdrop-filter:blur(12px);flex-wrap:wrap}
+.search{flex:1 1 220px;max-width:512px;display:flex;gap:8px;align-items:center;padding:8px 16px;border-radius:12px;background:rgba(11,14,21,.8);box-shadow:inset 0 2px 4px rgba(0,0,0,.05);color:var(--dim)}
+.search input{flex:1;min-width:0;background:none;border:0;color:var(--text);font:400 14px var(--sans)}
+.search input::placeholder{color:var(--dim)}
+.filters{display:flex;gap:4px}
+.f{display:flex;gap:6px;align-items:center;padding:4px 16px;border-radius:12px;font:500 12px/18px var(--sans);letter-spacing:.12px;color:var(--muted)}
+.f .n{padding:2px 6px;border-radius:99px;font:700 11px/14px var(--serif);letter-spacing:.66px}
+.f[data-f=all] .n{background:rgba(0,0,0,.2)}
+.f[data-f=in] .n{background:rgba(78,222,163,.15);color:var(--green)}
+.f[data-f=out] .n{background:rgba(255,180,171,.15);color:var(--red)}
+.f.on{background:var(--indigo);color:#0d0096;font-weight:600;box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.f.on .n{color:#0d0096!important}
+.actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.upd{display:flex;gap:4px;align-items:center;padding:0 4px}
+.upd i{width:6px;height:6px;border-radius:50%;background:var(--cyan-l)}
+.btn{display:flex;gap:6px;align-items:center;padding:4px 16px;border-radius:12px;font:400 12px/18px var(--sans);letter-spacing:.12px}
+.btn.grad{background:linear-gradient(90deg,var(--green-d),var(--cyan));color:#000703;font:700 12px/18px var(--serif);filter:drop-shadow(0 0 8px rgba(78,222,163,.3))}
+.btn.ghost{background:rgba(39,42,50,.6);color:var(--muted)}
+
+/* main */
+.main{display:grid;grid-template-columns:repeat(12,1fr);gap:20px;align-items:start}
+.left{grid-column:span 8;display:flex;flex-direction:column;gap:16px}
+.right{grid-column:span 4;display:flex;flex-direction:column;gap:24px}
+.roster-h{display:flex;justify-content:space-between;align-items:center;padding:0 4px}
+.roster-h h2{font:700 16px/24px var(--serif);display:flex;gap:4px;align-items:center}
+.roster-h h2 span{background:var(--chip);color:var(--muted);padding:2px 8px;border-radius:99px;font-size:11px;line-height:14px;letter-spacing:.66px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.card{padding:16px;display:flex;flex-direction:column;gap:16px;border-radius:16px;background:rgba(29,31,39,.7);backdrop-filter:blur(12px);box-shadow:0 4px 24px -4px rgba(78,222,163,.18);transition:box-shadow .3s,background .3s}
+.card.out{background:rgba(29,31,39,.5);box-shadow:0 4px 24px -4px rgba(244,63,94,.14)}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.who{display:flex;gap:8px;align-items:center;min-width:0}
+.av{position:relative;width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font:700 16px var(--serif);color:#fff;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ring)}
+.av u{position:absolute;right:-4px;bottom:-4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--bg);background:var(--sc)}
+.nm{font:700 16px/24px var(--serif);letter-spacing:-.4px}
+.meta{display:flex;gap:6px;align-items:center;padding-top:2px;color:var(--dim);font:500 11px/16px var(--sans);white-space:nowrap}
+.meta em{font:400 10px/15px var(--serif);font-style:normal;background:rgba(11,14,21,.8);color:var(--muted);padding:2px 8px;border-radius:4px}
+.status{display:flex;gap:6px;align-items:center;padding:4px 10px;border-radius:99px;font:700 11px/14px var(--serif);letter-spacing:.66px;white-space:nowrap}
+.status i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.status.in{background:rgba(78,222,163,.15);color:var(--green);box-shadow:0 0 10px rgba(78,222,163,.3)}
+.status.out{background:rgba(255,180,171,.15);color:var(--red);box-shadow:0 0 10px rgba(255,180,171,.2)}
+.ctl{display:flex;gap:10px}
+.ctl button{flex:1;display:flex;gap:6px;justify-content:center;align-items:center;padding:8px;border-radius:12px;background:rgba(50,53,61,.6);color:var(--muted);font:400 12px/18px var(--sans);letter-spacing:.12px;transition:transform .15s}
+.ctl button:hover{transform:scale(1.02)}
+.ctl .yes.on{background:linear-gradient(90deg,var(--green-d),var(--cyan));color:#000703;font-weight:600;filter:drop-shadow(0 0 8px rgba(78,222,163,.4))}
+.ctl .no.on{background:linear-gradient(90deg,var(--red-d),var(--red));color:#ffdad6;font-weight:600;filter:drop-shadow(0 0 8px rgba(244,63,94,.4))}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:32px;font-size:14px}
+
+/* right column */
+.panel{padding:24px;display:flex;flex-direction:column;gap:16px}
+.panel h3{font:700 16px/24px var(--serif);display:flex;gap:6px;align-items:center}
+.livechip{background:rgba(76,215,246,.1);color:var(--cyan-l);padding:2px 8px;border-radius:99px;font:700 11px/14px var(--serif);letter-spacing:.66px}
+.log{display:flex;flex-direction:column;gap:8px;max-height:460px;overflow:auto;padding-right:4px;list-style:none;padding-left:0}
+.log li{display:flex;gap:8px;padding:8px;border-radius:12px;background:var(--inset);align-items:flex-start}
+.log .ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:14px;flex:none}
+.log .ic.in{background:rgba(78,222,163,.15);color:var(--green)}
+.log .ic.out{background:rgba(255,180,171,.15);color:var(--red)}
+.log .t{flex:1;min-width:0}
+.log .t div{display:flex;justify-content:space-between;gap:8px}
+.log b{font:600 12px/18px var(--sans);letter-spacing:.12px}
+.log time{font:500 11px/16px var(--sans);color:var(--muted)}
+.log p{font-size:12px;line-height:18px;color:var(--muted);letter-spacing:.12px}
+.log .g{color:var(--green)}.log .r{color:var(--red)}
+.foot{display:flex;justify-content:space-between;padding-top:4px}
+.foot button{color:var(--dim);text-decoration:underline;font:500 11px/16px var(--sans)}
+.tele{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:rgba(11,14,21,.7);padding:8px;border-radius:12px;display:flex;flex-direction:column;gap:4px}
+.tile .l{display:flex;gap:4px;align-items:center;color:var(--muted);font:500 11px/16px var(--sans);letter-spacing:.33px}
+.tile .v{font:700 16px/24px var(--serif)}
+.tile .s{font-size:10px;line-height:15px}
+.trend{background:rgba(11,14,21,.5);padding:8px;border-radius:12px;display:flex;flex-direction:column;gap:8px}
+.bars{display:flex;gap:4px;height:40px;align-items:flex-end}
+.bars i{flex:1;border-radius:4px 4px 0 0;background:#32353d}
+
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 16px;border-radius:12px;background:rgba(255,180,171,.12);color:var(--red);font:500 12px/18px var(--sans)}
+.banner[hidden]{display:none}
+.banner button{text-decoration:underline;color:inherit;font:inherit;white-space:nowrap}
+.btn.confirm{background:linear-gradient(90deg,var(--red-d),var(--red));color:#ffdad6}
+@media (max-width:960px){
+  .wrap{padding:32px 16px}
+  .metrics,.main{grid-template-columns:1fr}
+  .left,.right{grid-column:auto}
+  .actions{margin-left:0;width:100%;flex-wrap:wrap}
+}
+@media (max-width:560px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-checks" viewBox="0 0 24 24"><path d="M18 7 7 18l-5-5M22 7 11 18"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4" r="1.5"/><path d="m9 21 3-7 3 3v4M8 12l2-4 4 1 2 3M6 8l2 4"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 20V8M3 16h18v4M21 16v-3a3 3 0 0 0-3-3H8v6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M17 4.5a3.5 3.5 0 0 1 0 7M22 21v-1a6 6 0 0 0-4-5.6"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/></symbol>
+  <symbol id="i-temp" viewBox="0 0 24 24"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0Z"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5ZM16 9a5 5 0 0 1 0 6M19 6a9 9 0 0 1 0 12"/></symbol>
+</svg>
+
+<main class="wrap">
+  <i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>
+  <div class="banner" id="banner" role="status" hidden><span id="bannerMsg"></span><button id="retry">Retry</button></div>
+
+  <header>
+    <div>
+      <div class="title-row">
+        <h1>ROOM CHECK</h1>
+        <span class="pill live"><span class="ping"><i></i><b></b></span>Telemetry Active</span>
+        <span class="tag">Suite 402</span>
+      </div>
+      <p class="sub">Real-time presence monitoring &amp; occupational mesh tracking</p>
+    </div>
+    <div class="clock" aria-live="off">
+      <span class="ic"><svg><use href="#i-clock"/></svg></span>
+      <div><div class="t" id="time">--:--:--</div><div class="d" id="date"></div></div>
+      <span class="dot8"></span>
+    </div>
+  </header>
+
+  <section class="metrics">
+    <article class="glass metric" style="--glow:rgba(192,193,255,.1)">
+      <div class="row">
+        <div class="m-title">Total Cohort</div>
+        <div class="icbtn"><svg><use href="#i-users"/></svg></div>
+      </div>
+      <div class="big"><b id="mTotal">7</b><span>Registered</span></div>
+      <div class="row"><span class="small">Room 402 Cohort</span><span class="badge" style="background:rgba(192,193,255,.1);color:var(--lav)">100% ASSIGNED</span></div>
+    </article>
+
+    <article class="glass metric" style="--glow:rgba(78,222,163,.1)">
+      <div class="row">
+        <div class="m-title">Inside Room <span class="d" style="background:var(--green)"></span></div>
+        <span class="status in">ACTIVE</span>
+      </div>
+      <div class="big"><b id="mIn" style="color:var(--green);text-shadow:0 0 16px rgba(78,222,163,.35)">4</b><span id="mInOf">/ 7 present</span></div>
+      <div><div class="bar"><i id="bar" style="width:57%"></i></div>
+        <div class="row" style="margin-top:6px"><span class="mini" id="occ">57% occupancy</span><span class="mini" style="color:var(--green)" id="dens">Normal density</span></div></div>
+    </article>
+
+    <article class="glass metric" style="--glow:rgba(255,180,171,.1)">
+      <div class="row">
+        <div class="m-title">Outside Room <span class="d" style="background:rgba(255,180,171,.8)"></span></div>
+        <span class="status out">OFFSITE</span>
+      </div>
+      <div class="big"><b id="mOut" style="color:var(--red);text-shadow:0 0 16px rgba(255,180,171,.35)">3</b><span id="mOutOf">/ 7 away</span></div>
+      <div class="row"><span class="small">Campus or In-Transit</span><span class="badge" id="away" style="background:rgba(255,180,171,.1);color:var(--red)">43% AWAY</span></div>
+    </article>
+  </section>
+
+  <section class="toolbar">
+    <label class="search"><svg><use href="#i-search"/></svg>
+      <input id="q" type="search" placeholder="Search members by name, spot, or status..." aria-label="Search members">
+    </label>
+    <div class="filters" role="group" aria-label="Filter">
+      <button class="f on" data-f="all">All <span class="n" id="nAll">7</span></button>
+      <button class="f" data-f="in">In Room <span class="n" id="nIn">4</span></button>
+      <button class="f" data-f="out">Outside <span class="n" id="nOut">3</span></button>
+    </div>
+    <div class="actions">
+      <span class="upd mini"><i></i>Updated <span id="upd">just now</span></span>
+      <button class="btn grad" id="markAll"><svg><use href="#i-checks"/></svg>Mark All Inside</button>
+      <button class="btn ghost" id="reset"><svg><use href="#i-reset"/></svg>Reset Status</button>
+    </div>
+  </section>
+
+  <section class="main">
+    <div class="left">
+      <div class="roster-h">
+        <h2>Active Roster <span>Suite 402</span></h2>
+        <span class="mini" id="showing">Showing 7 of 7 members</span>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <aside class="right">
+      <div class="glass panel">
+        <div class="row">
+          <h3><svg style="color:var(--cyan-l)"><use href="#i-history"/></svg>Recent Room Activity</h3>
+          <span class="livechip">LIVE</span>
+        </div>
+        <ul class="log" id="log"></ul>
+        <div class="foot"><span class="mini">Activity logged locally</span><button id="clear">Clear history</button></div>
+      </div>
+
+      <div class="glass panel">
+        <div class="row"><h3>Room 402 Telemetry</h3><svg style="color:var(--cyan-l)"><use href="#i-wifi"/></svg></div>
+        <div class="tele">
+          <div class="tile"><span class="l"><svg style="color:var(--lav)"><use href="#i-temp"/></svg>Temp</span><span class="v" id="temp">69.4°F</span><span class="s" style="color:var(--green)">Optimal HVAC</span></div>
+          <div class="tile"><span class="l"><svg style="color:var(--cyan-l)"><use href="#i-sound"/></svg>Quiet Hours</span><span class="v">22:00</span><span class="s" style="color:var(--cyan-l)" id="quiet">Active Now</span></div>
+        </div>
+        <div class="trend">
+          <div class="row"><span class="mini">Hourly Presence Trend (Last 8h)</span><span class="mini" style="color:var(--cyan-l);font-family:var(--serif)" id="peak">Peak: 6</span></div>
+          <div class="bars" id="bars"></div>
+        </div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+/* ---------- config ---------- */
+const API = 'https://script.google.com/macros/s/AKfycbzDAKuq80izDo3c8mqTGVUpjab9v3EkEEnug4boGhDz6j55V27NIiQn6Y0k_J-L_Ufwvw/exec';
+const DEMO_KEY = 'roomcheck-demo-v1';
+const GRAD = [
+  ['#8083ff','#4cd7f6'],['#4edea3','#03b5d3'],['#ffb4ab','#8083ff'],['#acedff','#2f2ebe'],
+  ['#93000a','#ffb4ab'],['#6ffbbe','#00885d'],['#8083ff','#4edea3']
+];
+
+/* ---------- state ---------- */
+let members = [], log = [], filter = 'all', query = '', lastUpdate = Date.now();
+let mode = 'loading';   // 'live' (Google Sheet) | 'demo' (this browser only)
+let pending = 0;        // saves in flight - polling waits for them
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const name = id => `Member ${pad(id)}`;
+const now = () => Date.now();
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function ago(ts){
+  const m = Math.floor((now()-ts)/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m/60), r = m%60;
+  return r ? `${h}h ${r}m ago` : `${h}h ago`;
+}
+
+/* ---------- server calls ---------- */
+function api(action, params = {}){
+  const u = new URL(API);
+  u.searchParams.set('action', action);
+  Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  return fetch(u, {signal: ctrl.signal})
+    .then(r => r.text())
+    .then(txt => {
+      let d;
+      try { d = JSON.parse(txt); }
+      catch { throw new Error('The Apps Script did not return data. Deploy the latest Code.gs as a new version with access set to "Anyone".'); }
+      if (d.error) throw new Error(d.error);
+      return d;
+    })
+    .catch(e => { throw e.name === 'AbortError' ? new Error('The server took too long to respond.') : e; })
+    .finally(() => clearTimeout(t));
+}
+
+/* ---------- demo (offline) data ---------- */
+function seed(){
+  const n = now(), m = 60000;
+  return {
+    members: [[1,'Desk Alpha','in',2],[2,'Bunk Lower','in',14],[3,'Window Side','out',60],[4,'Study Corner','in',45],
+              [5,'Bunk Upper','out',18],[6,'Balcony Wing','in',30],[7,'Tech Station','out',120]]
+      .map(r => ({id:r[0], spot:r[1], status:r[2], since:n - r[3]*m})),
+    log: [[1,'in',2],[5,'out',18],[4,'in',45],[3,'out',72]].map(r => ({m:r[0], type:r[1], at:n - r[2]*m}))
+  };
+}
+function readDemo(){
+  try { const s = JSON.parse(localStorage.getItem(DEMO_KEY)); if (s && s.members && s.members.length) return s; } catch {}
+  return seed();
+}
+function saveDemo(){
+  if (mode !== 'demo') return;
+  try { localStorage.setItem(DEMO_KEY, JSON.stringify({
+    members: members.map(({id,spot,status,since}) => ({id,spot,status,since})), log })); } catch {}
+}
+
+/* ---------- mode + banner ---------- */
+function setBanner(msg){ $('banner').hidden = !msg; $('bannerMsg').textContent = msg || ''; }
+function goDemo(reason){
+  if (mode !== 'demo') {
+    const s = members.length ? {members, log} : readDemo();
+    mode = 'demo'; load(s, true);
+  }
+  setBanner('Demo mode: changes are saved only in this browser. ' + reason);
+}
+function load(s, keepTime){
+  members = s.members.map(m => ({...m, g: GRAD[(m.id-1) % GRAD.length]}));
+  log = s.log;
+  if (!keepTime) lastUpdate = lastUpdate;   // time label changes only on user actions
+  renderAll();
+}
+function sync(){
+  if (pending > 0) return Promise.resolve();
+  return api('getState').then(s => { mode = 'live'; setBanner(''); load(s); }).catch(e => goDemo(e.message));
+}
+
+/* ---------- render ---------- */
+function renderStats(){
+  const total = members.length;
+  const inN = members.filter(m => m.status==='in').length;
+  const outN = total - inN;
+  const pct = total ? Math.round(inN/total*100) : 0;
+  $('mTotal').textContent = total;
+  $('mIn').textContent = inN;   $('mInOf').textContent = `/ ${total} present`;
+  $('mOut').textContent = outN; $('mOutOf').textContent = `/ ${total} away`;
+  $('bar').style.width = pct + '%';
+  $('occ').textContent = pct + '% occupancy';
+  $('dens').textContent = pct >= 80 ? 'High density' : pct >= 40 ? 'Normal density' : 'Low density';
+  $('away').textContent = (100-pct) + '% AWAY';
+  $('nAll').textContent = total; $('nIn').textContent = inN; $('nOut').textContent = outN;
+}
+
+function renderGrid(){
+  const q = query.trim().toLowerCase();
+  const list = members.filter(m => {
+    if (filter !== 'all' && m.status !== filter) return false;
+    if (!q) return true;
+    const label = m.status === 'in' ? 'in room' : 'outside';
+    return [name(m.id), String(m.spot), label].some(s => s.toLowerCase().includes(q));
+  });
+  $('showing').textContent = `Showing ${list.length} of ${members.length} members`;
+  if (!list.length) {
+    $('grid').innerHTML = members.length
+      ? `<p class="empty">No members match "${esc(query)}". Clear the search or pick another filter.</p>`
+      : `<p class="empty">Loading roster...</p>`;
+    return;
+  }
+  $('grid').innerHTML = list.map(m => {
+    const isIn = m.status === 'in';
+    return `
+    <article class="card ${isIn?'':'out'}">
+      <div class="top">
+        <div class="who">
+          <div class="av" style="background:linear-gradient(135deg,${m.g[0]},${m.g[1]});--ring:${isIn?'#4edea3':'#464554'};--sc:${isIn?'#4edea3':'#ffb4ab'}">M${pad(m.id)}<u></u></div>
+          <div>
+            <div class="nm">${name(m.id)}</div>
+            <div class="meta"><em>${esc(m.spot)}</em><span>•</span><span>${ago(m.since)}</span></div>
+          </div>
+        </div>
+        <span class="status ${isIn?'in':'out'}"><i></i>${isIn?'IN ROOM':'OUTSIDE'}</span>
+      </div>
+      <div class="ctl">
+        <button class="yes ${isIn?'on':''}" data-id="${m.id}" data-s="in"><svg><use href="${isIn?'#i-check':'#i-bed'}"/></svg>YES - In Room</button>
+        <button class="no ${isIn?'':'on'}" data-id="${m.id}" data-s="out"><svg><use href="${isIn?'#i-walk':'#i-in'}"/></svg>NO - Outside</button>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function renderLog(){
+  $('log').innerHTML = log.length ? log.map(l => `
+    <li>
+      <span class="ic ${l.type}"><svg><use href="#i-${l.type}"/></svg></span>
+      <div class="t">
+        <div><b>${name(l.m)}</b><time>${ago(l.at)}</time></div>
+        <p>${l.type==='in' ? 'Marked presence as' : 'Checked out to'} <span class="${l.type==='in'?'g':'r'}">${l.type==='in'?'IN ROOM':'OUTSIDE'}</span></p>
+      </div>
+    </li>`).join('') : '<li><p>No activity yet. Mark a member in or out to start the log.</p></li>';
+}
+function renderAll(){ renderStats(); renderGrid(); renderLog(); }
+
+/* ---------- actions: update screen first, then save ---------- */
+function setLocal(id, status){
+  const m = members.find(x => x.id === id);
+  if (!m || m.status === status) return false;
+  m.status = status; m.since = now(); lastUpdate = now();
+  log.unshift({m:id, type:status, at:now()});
+  return true;
+}
+function save(action, params){
+  if (mode === 'demo') { saveDemo(); return; }
+  pending++;
+  api(action, params)
+    .catch(e => goDemo('Could not save to the Sheet: ' + e.message))
+    .finally(() => { pending--; });
+}
+
+$('grid').addEventListener('click', e => {
+  const b = e.target.closest('button[data-id]');
+  if (!b) return;
+  const id = +b.dataset.id, s = b.dataset.s;
+  if (setLocal(id, s)) { renderAll(); save('setStatus', {id, status:s}); }
+});
+document.querySelector('.filters').addEventListener('click', e => {
+  const b = e.target.closest('.f'); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll('.f').forEach(x => x.classList.toggle('on', x === b));
+  renderGrid();
+});
+$('q').addEventListener('input', e => { query = e.target.value; renderGrid(); });
+$('markAll').addEventListener('click', () => {
+  let changed = false;
+  members.forEach(m => { if (setLocal(m.id,'in')) changed = true; });
+  renderAll();
+  if (changed) save('markAllInside');
+});
+let resetTimer;
+$('reset').addEventListener('click', () => {
+  const btn = $('reset');
+  if (!btn.classList.contains('confirm')) {
+    btn.classList.add('confirm');
+    btn.lastChild.textContent = 'Click again to confirm';
+    resetTimer = setTimeout(resetBtn, 3000);
+    return;
+  }
+  resetBtn();
+  lastUpdate = now();
+  if (mode === 'demo') { load(seed(), true); saveDemo(); }
+  else api('resetAll').then(s => load(s, true)).catch(e => goDemo(e.message));
+});
+function resetBtn(){
+  clearTimeout(resetTimer);
+  const btn = $('reset');
+  btn.classList.remove('confirm');
+  btn.lastChild.textContent = 'Reset Status';
+}
+$('clear').addEventListener('click', () => { log = []; renderLog(); save('clearLog'); });
+$('retry').addEventListener('click', () => { mode = 'loading'; setBanner('Reconnecting...'); sync(); });
+
+/* ---------- clock + telemetry ---------- */
+function tick(){
+  const d = new Date();
+  $('time').textContent = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  $('date').textContent = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  const s = Math.floor((now()-lastUpdate)/1000);
+  $('upd').textContent = s < 10 ? 'just now' : s < 60 ? s+'s ago' : Math.floor(s/60)+'m ago';
+  const h = d.getHours();
+  $('quiet').textContent = (h >= 22 || h < 6) ? 'Active Now' : 'Starts 22:00';
+}
+const BARS = [3,4,2,3,6,5,4,4]; // sample data
+function renderBars(){
+  const peak = Math.max(...BARS);
+  $('bars').innerHTML = BARS.map((v,i) => {
+    const c = i<4 ? '#32353d' : i<6 ? '#03b5d3' : i===6 ? '#00885d' : '#4edea3';
+    return `<i style="height:${Math.round(v/peak*100)}%;background:${c}"></i>`;
+  }).join('');
+  $('peak').textContent = 'Peak: ' + peak;
+}
+
+/* ---------- start ---------- */
+renderBars(); renderAll(); tick();
+sync();
+setInterval(tick, 1000);
+setInterval(() => { if (mode === 'live') sync(); else { renderGrid(); renderLog(); } }, 15000);
+</script>
+</body>
+</html>
